@@ -1,0 +1,27 @@
+## .NET / C# gitignore
+
+# Build output
+bin/
+obj/
+publish/
+dist/
+
+# VS artifacts
+*.user
+*.suo
+.vs/
+*.rsuser
+
+# Rider
+.idea/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Runtime config / logs
+*.log
