@@ -83,7 +83,7 @@ Console.ForegroundColor = ConsoleColor.DarkGray;
 Console.WriteLine("  ───────────────────────────────────────────────────────────────────────");
 Console.ResetColor();
 
-Row("License", "AGPL-3.0  —  Copyright (c) 2026 Skynr Labs", ConsoleColor.Yellow);
+Row("License", "Copyright (c) 2026 Skynr Labs. All rights reserved.", ConsoleColor.Yellow);
 
 Console.ForegroundColor = ConsoleColor.DarkGray;
 Console.Write($"  {"Privacy",-14}");

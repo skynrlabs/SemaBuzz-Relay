@@ -71,6 +71,6 @@ docker run -p 7171:7171 semabuzz-relay
 
 ## License
 
-AGPL-3.0 — see [LICENSE](LICENSE).
+Proprietary — see [LICENSE](LICENSE).
 
-Copyright © 2026 Skynr Labs.
+Copyright © 2026 Skynr Labs. All rights reserved.
