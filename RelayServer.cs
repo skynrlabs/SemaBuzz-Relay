@@ -151,6 +151,7 @@ internal sealed class RelayServer
     private static async Task ForwardLoopAsync(WebSocket ws, RelayRoom room, CancellationToken ct)
     {
         var buf = new byte[65_536];
+        var msgStream = new System.IO.MemoryStream(65_536);
         // H-1: sliding 1-second window to cap sustained bandwidth per session.
         long windowBytes = 0;
         var windowStart = DateTime.UtcNow;
@@ -158,32 +159,47 @@ internal sealed class RelayServer
         {
             while (!ct.IsCancellationRequested && ws.State == WebSocketState.Open)
             {
-                WebSocketReceiveResult recv;
-                try { recv = await ws.ReceiveAsync(buf, ct); }
-                catch (OperationCanceledException) { break; }
-                catch { break; }
-
-                if (recv.MessageType == WebSocketMessageType.Close) break;
-
-                // H-1: reset window each second; terminate session if sustained rate exceeds cap.
-                var now = DateTime.UtcNow;
-                if ((now - windowStart).TotalSeconds >= 1.0) { windowBytes = 0; windowStart = now; }
-                windowBytes += recv.Count;
-                if (windowBytes > BwCapBytesPerSec)
+                // Reassemble a complete WebSocket message — a single logical message may
+                // span multiple frames when the OS delivers it in separate TCP segments.
+                msgStream.SetLength(0);
+                bool gotClose = false;
+                while (true)
                 {
-                    await CloseAsync(ws, WebSocketCloseStatus.PolicyViolation, "Bandwidth limit exceeded", ct);
-                    return;
+                    WebSocketReceiveResult recv;
+                    try { recv = await ws.ReceiveAsync(buf, ct); }
+                    catch (OperationCanceledException) { return; }
+                    catch { return; }
+
+                    if (recv.MessageType == WebSocketMessageType.Close) { gotClose = true; break; }
+
+                    // H-1: reset window each second; terminate session if sustained rate exceeds cap.
+                    // Bandwidth is tracked per-frame so partial-message bytes count toward the window.
+                    var now = DateTime.UtcNow;
+                    if ((now - windowStart).TotalSeconds >= 1.0) { windowBytes = 0; windowStart = now; }
+                    windowBytes += recv.Count;
+                    if (windowBytes > BwCapBytesPerSec)
+                    {
+                        await CloseAsync(ws, WebSocketCloseStatus.PolicyViolation, "Bandwidth limit exceeded", ct);
+                        return;
+                    }
+
+                    msgStream.Write(buf, 0, recv.Count);
+                    if (recv.EndOfMessage) break;
                 }
 
+                if (gotClose) break;
+
                 room.Touch();
-                var frame = buf.AsMemory(0, recv.Count);
+                var msgBytes = msgStream.GetBuffer();
+                var msgLen   = (int)msgStream.Length;
+                var frame    = new ReadOnlyMemory<byte>(msgBytes, 0, msgLen);
 
                 // Intercept PunchReady — do NOT forward to peer.
-                if (recv.Count == SemaBuzzRelayPacket.PunchPacketSize
-                    && SemaBuzzRelayPacket.IsRelayPacket(buf)
-                    && (SemaBuzzRelayPacketType)buf[3] == SemaBuzzRelayPacketType.PunchReady)
+                if (msgLen == SemaBuzzRelayPacket.PunchPacketSize
+                    && SemaBuzzRelayPacket.IsRelayPacket(msgBytes)
+                    && (SemaBuzzRelayPacketType)msgBytes[3] == SemaBuzzRelayPacketType.PunchReady)
                 {
-                    var ep = SemaBuzzRelayPacket.ParseEndpoint(buf[..recv.Count]);
+                    var ep = SemaBuzzRelayPacket.ParseEndpoint(msgBytes[..msgLen]);
                     if (ep != null)
                     {
                         bool isHost = ReferenceEquals(ws, room.HostWs);
@@ -207,6 +223,7 @@ internal sealed class RelayServer
         }
         finally
         {
+            msgStream.Dispose();
             await CloseAsync(ws, WebSocketCloseStatus.NormalClosure, "Session ended", ct);
         }
     }
