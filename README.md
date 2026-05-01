@@ -66,7 +66,7 @@ docker run -p 7171:7171 semabuzz-relay
 | Global room cap | 500 rooms |
 | Rooms per IP | 2 concurrent |
 | Connections per IP | 5 concurrent |
-| Bandwidth cap | 512 KB/s per session |
+| Bandwidth cap | 2 MB/s per session |
 | Room TTL (idle) | 10 minutes |
 
 ## License

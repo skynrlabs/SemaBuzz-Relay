@@ -68,7 +68,7 @@ static void Row(string label, string value, ConsoleColor valueColor = ConsoleCol
     Console.ResetColor();
 }
 
-Row("Version", "1.0.0");
+Row("Version", "1.1.0");
 Row("Port", port.ToString());
 Row("Relay URI", $"ws://localhost:{port}/relay", ConsoleColor.Green);
 foreach (var ip in localIPs)
