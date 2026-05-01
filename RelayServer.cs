@@ -16,7 +16,7 @@ internal sealed class RelayServer
     private const int MaxRooms = 500;   // global cap
     private const int MaxPerIp = 5;     // concurrent sockets per IP
     private const int MaxRoomsPerIp = 2;     // rooms a single IP may host at once (C-2)
-    private const long BwCapBytesPerSec = 512 * 1024; // 512 KB/s per session (H-1)
+    private const long BwCapBytesPerSec = 2 * 1024 * 1024; // 2 MB/s per session (H-1)
 
     private readonly ConcurrentDictionary<string, RelayRoom> _rooms =
         new(StringComparer.OrdinalIgnoreCase);
