@@ -42,7 +42,7 @@ Console.WriteLine("  ╚════██║██╔══╝  ██║╚█
 Console.WriteLine("  ███████║███████╗██║ ╚═╝ ██║██║  ██║██████╔╝╚██████╔╝███████╗███████╗");
 Console.WriteLine("  ╚══════╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚══════╝╚══════╝");
 Console.ForegroundColor = ConsoleColor.DarkCyan;
-Console.WriteLine("                          ·  R E L A Y   S E R V E R  ·");
+Console.WriteLine("                    ·  R E L A Y   S E R V E R  ·");
 Console.ResetColor();
 Console.WriteLine();
 
