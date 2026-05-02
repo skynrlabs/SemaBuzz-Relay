@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using SemaBuzz.Relay;
 
 // SemaBuzz Relay Server  (ASP.NET Core WebSocket relay)
@@ -150,6 +152,85 @@ app.Map("/relay", async ctx =>
 
 // Health check for Railway / Render uptime monitors.
 app.MapGet("/", () => Results.Ok("SemaBuzz Relay OK"));
+
+// ── File staging (POST /file, GET /file/{token}) ─────────────────────────────
+// Files are held in RAM for up to 10 minutes.  The token is a 16-char lowercase
+// hex string generated from 8 cryptographically-random bytes.  Slots are
+// consumed on the first successful GET, or swept after expiry.
+const long MaxStagedFileBytes = 10L * 1024 * 1024;  // 10 MB per file
+const int  MaxStagedFiles     = 200;                 // global in-memory cap
+var fileStagingTtl = TimeSpan.FromMinutes(10);
+var stagedFiles = new ConcurrentDictionary<string, (byte[] Data, DateTime Expiry)>(
+    StringComparer.OrdinalIgnoreCase);
+
+// Background sweep: remove expired entries every 2 minutes.
+_ = Task.Run(async () =>
+{
+    while (!app.Lifetime.ApplicationStopping.IsCancellationRequested)
+    {
+        try { await Task.Delay(TimeSpan.FromMinutes(2), app.Lifetime.ApplicationStopping); }
+        catch (OperationCanceledException) { break; }
+        var now = DateTime.UtcNow;
+        foreach (var kv in stagedFiles)
+            if (now > kv.Value.Expiry) stagedFiles.TryRemove(kv.Key, out _);
+    }
+});
+
+// POST /file — upload a file (up to 10 MB), returns a 16-char hex token.
+app.MapPost("/file", async (HttpContext ctx) =>
+{
+    if (ctx.Request.ContentLength > MaxStagedFileBytes)
+    {
+        ctx.Response.StatusCode = 413;
+        await ctx.Response.WriteAsync("File too large (max 10 MB).");
+        return;
+    }
+    if (stagedFiles.Count >= MaxStagedFiles)
+    {
+        ctx.Response.StatusCode = 503;
+        await ctx.Response.WriteAsync("Server is at capacity; try again later.");
+        return;
+    }
+    using var ms = new MemoryStream();
+    await ctx.Request.Body.CopyToAsync(ms, ctx.RequestAborted);
+    if (ms.Length == 0)
+    {
+        ctx.Response.StatusCode = 400;
+        await ctx.Response.WriteAsync("Empty body.");
+        return;
+    }
+    if (ms.Length > MaxStagedFileBytes)
+    {
+        ctx.Response.StatusCode = 413;
+        await ctx.Response.WriteAsync("File too large (max 10 MB).");
+        return;
+    }
+    var tokenBytes = RandomNumberGenerator.GetBytes(8);
+    var token = Convert.ToHexString(tokenBytes).ToLowerInvariant(); // 16 hex chars
+    stagedFiles[token] = (ms.ToArray(), DateTime.UtcNow.Add(fileStagingTtl));
+    ctx.Response.ContentType = "text/plain";
+    await ctx.Response.WriteAsync(token);
+});
+
+// GET /file/{token} — download and consume a staged file (single-use).
+app.MapGet("/file/{token}", async (HttpContext ctx, string token) =>
+{
+    if (!stagedFiles.TryRemove(token, out var entry))
+    {
+        ctx.Response.StatusCode = 404;
+        await ctx.Response.WriteAsync("File not found or already downloaded.");
+        return;
+    }
+    if (DateTime.UtcNow > entry.Expiry)
+    {
+        ctx.Response.StatusCode = 410;
+        await ctx.Response.WriteAsync("File token has expired.");
+        return;
+    }
+    ctx.Response.ContentType   = "application/octet-stream";
+    ctx.Response.ContentLength = entry.Data.Length;
+    await ctx.Response.Body.WriteAsync(entry.Data, ctx.RequestAborted);
+});
 
 await app.RunAsync();
 
