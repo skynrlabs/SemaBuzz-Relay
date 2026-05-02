@@ -78,6 +78,7 @@ foreach (var ip in localIPs)
 Row("Health", $"http://localhost:{port}/");
 Row("Keep-alive", "30 s");
 Row("Room TTL", "10 min");
+Row("File TTL", "10 min  (staged files auto-expire)");
 Row("Max rooms", "500  (global)");
 Row("Max per IP", "5  concurrent connections");
 
