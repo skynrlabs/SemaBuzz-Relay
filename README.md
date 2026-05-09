@@ -64,16 +64,26 @@ dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=tru
 
 ## 🐳 Docker
 
+You can easily run the relay using Docker. The following multi-stage `Dockerfile` is platform-agnostic and will build and run the relay universally (including on Windows hosts via Docker Desktop).
+
 ```dockerfile
+# Stage 1: Build the application
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+COPY ["SemaBuzz.Relay.csproj", "./"]
+RUN dotnet restore "SemaBuzz.Relay.csproj"
+COPY . .
+RUN dotnet publish "SemaBuzz.Relay.csproj" -c Release -o /app/publish
+
+# Stage 2: Run the application
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
-COPY publish/ .
-ENTRYPOINT ["./SemaBuzz-Relay-Linux"]
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "SemaBuzz.Relay.dll"]
 ```
 
-Build and publish:
+Build and run the container:
 ```bash
-dotnet publish -c Release -r linux-x64 --self-contained -o publish
 docker build -t semabuzz-relay .
 docker run -p 7171:7171 semabuzz-relay
 ```
