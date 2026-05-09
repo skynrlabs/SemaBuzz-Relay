@@ -164,7 +164,7 @@ app.Map("/relay", async ctx =>
 });
 
 // Health check for Railway / Render uptime monitors.
-app.MapGet("/", () => Results.Ok("SemaBuzz Relay OK"));
+app.MapGet("/", () => Results.Ok("Relay OK"));
 
 // ── File staging (POST /file, GET /file/{token}) ─────────────────────────────
 // Files are held in RAM for up to 10 minutes.  The token is a 16-char lowercase
