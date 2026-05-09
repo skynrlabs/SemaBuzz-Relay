@@ -27,9 +27,16 @@ SemaBuzz-Relay-Windows.exe --port 8080
 ./SemaBuzz-Relay-Linux --port 8080
 ```
 
-The relay listens on:
-- `ws://host:PORT/relay` — Primary WebSocket endpoint for peer clients
-- `http://host:PORT/` — Health check (returns HTTP 200 OK)
+## 🔌 Endpoints
+
+| Endpoint | Protocol | Description |
+|---|---|---|
+| `/relay` | WebSocket | Primary peer-pairing endpoint. Two clients connecting with the same 6-character room token are bridged together and raw binary frames are forwarded blindly between them. |
+| `/file` | HTTP POST | Stage a binary blob (up to 10 MB) for out-of-band transfer. Returns a short-lived token the receiving peer can use to fetch the file. Staged files expire after 10 minutes. |
+| `/file/{token}` | HTTP GET | Retrieve a previously staged file by its token. Once fetched or expired, the file is removed from memory. |
+| `/` | HTTP GET | Health check. Returns HTTP 200 OK. Useful for uptime monitors and PaaS health probes. |
+
+> **Note:** All HTTP endpoints (`/file`, `/`) support CORS from any origin, so browser-based apps can interact with them directly.
 
 ## ⚙️ Environment Variables
 
