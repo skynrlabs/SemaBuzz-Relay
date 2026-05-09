@@ -28,7 +28,7 @@ SemaBuzz-Relay-Windows.exe --port 8080
 ```
 
 The relay listens on:
-- `ws://host:PORT/relay` — WebSocket endpoint for SemaBuzz clients
+- `ws://host:PORT/relay` — Primary WebSocket endpoint for peer clients
 - `http://host:PORT/` — Health check (returns HTTP 200 OK)
 
 ## ⚙️ Environment Variables
@@ -45,7 +45,7 @@ The relay works out of the box on Railway, Render, Fly.io, and similar platforms
 1. Fork this repo
 2. Connect it to your Railway / Render / Fly.io project
 3. Set `TRUST_PROXY=true` if the platform injects `X-Forwarded-For`
-4. Point SemaBuzz at your relay by changing the `DefaultRelayUri` in your app
+4. Point your application at your relay by updating your WebSocket connection URIs.
 
 ## 📦 Building Standalone Binaries
 
