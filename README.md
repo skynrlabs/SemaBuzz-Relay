@@ -4,9 +4,9 @@
 [![.NET 9.0](https://img.shields.io/badge/.NET-9.0-512BD4.svg)](https://dotnet.microsoft.com/)
 [![Contributions: Read Only](https://img.shields.io/badge/Contributions-Read_Only-red.svg)](CONTRIBUTING.md)
 
-Self-hosted WebSocket relay server for [**SemaBuzz**](https://semabuzz.com).
+Self-hosted WebSocket blind relay server. Originally built for the [**SemaBuzz Protocol**](https://github.com/skynrlabs/SemaBuzz-Protocol), it is completely protocol-agnostic and can be used by **any application** requiring encrypted peer-to-peer pairing.
 
-The relay is a **blind pass-through** — it pairs two peers by a shared room token and forwards raw encrypted binary frames between them. Message content is never read, parsed, logged, or stored by the relay. IP addresses are held in memory only for the duration of an active session.
+The relay is a **blind pass-through** — it pairs two peers by a shared room token and forwards raw binary frames between them. Message content is never read, parsed, logged, or stored by the relay. IP addresses are held in memory only for the duration of an active session.
 
 ## 🛠️ Requirements
 
@@ -15,7 +15,7 @@ The relay is a **blind pass-through** — it pairs two peers by a shared room to
 
 ## ⚡ Quick Start
 
-`ash
+```bash
 # Run with defaults (port 7171)
 dotnet run
 
@@ -44,24 +44,24 @@ The relay works out of the box on Railway, Render, Fly.io, and similar platforms
 
 1. Fork this repo
 2. Connect it to your Railway / Render / Fly.io project
-3. Set TRUST_PROXY=true if the platform injects X-Forwarded-For
-4. Point SemaBuzz at your relay by changing the DefaultRelayUri in your app
+3. Set `TRUST_PROXY=true` if the platform injects `X-Forwarded-For`
+4. Point SemaBuzz at your relay by changing the `DefaultRelayUri` in your app
 
 ## 🐳 Docker
 
-`dockerfile
+```dockerfile
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY publish/ .
 ENTRYPOINT ["./SemaBuzz-Relay-Linux"]
-`
+```
 
 Build and publish:
-`ash
+```bash
 dotnet publish -c Release -r linux-x64 --self-contained -o publish
 docker build -t semabuzz-relay .
 docker run -p 7171:7171 semabuzz-relay
-`
+```
 
 ## 🚥 Rate Limits
 
