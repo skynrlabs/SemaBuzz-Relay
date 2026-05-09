@@ -25,18 +25,18 @@ dotnet run -- --port 8080
 # Pre-built binary
 SemaBuzz-Relay-Windows.exe --port 8080
 ./SemaBuzz-Relay-Linux --port 8080
-`
+```
 
 The relay listens on:
-- ws://host:PORT/relay — WebSocket endpoint for SemaBuzz clients
-- http://host:PORT/ — Health check (returns HTTP 200 OK)
+- `ws://host:PORT/relay` — WebSocket endpoint for SemaBuzz clients
+- `http://host:PORT/` — Health check (returns HTTP 200 OK)
 
 ## ⚙️ Environment Variables
 
 | Variable | Description | Default |
 |---|---|---|
-| PORT | Listening port | 7171 |
-| TRUST_PROXY | Set 	rue to honour X-Forwarded-For for real client IPs behind a reverse proxy | alse |
+| `PORT` | Listening port | `7171` |
+| `TRUST_PROXY` | Set `true` to honour `X-Forwarded-For` for real client IPs behind a reverse proxy | `false` |
 
 ## ☁️ Deploying to a PaaS
 
