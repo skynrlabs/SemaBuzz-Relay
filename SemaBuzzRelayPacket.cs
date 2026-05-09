@@ -32,8 +32,8 @@ public static class SemaBuzzRelayPacket
     // Relay server connection details.
     // DefaultRelayUri is the WebSocket endpoint used by both the listener and client.
     // Change this to your deployed relay URL before shipping.
-    public const string DefaultRelayUri = "wss://relay.semabuzz.me/relay";
-    public const string DefaultRelayHost = "relay.semabuzz.me"; // kept for reference
+    public const string DefaultRelayUri = "ws://localhost:7171/relay";
+    public const string DefaultRelayHost = "localhost"; // kept for reference
 
     public static bool IsRelayPacket(byte[] data) =>
         data.Length >= Size &&
