@@ -86,7 +86,7 @@ Console.ForegroundColor = ConsoleColor.DarkGray;
 Console.WriteLine("  ───────────────────────────────────────────────────────────────────────");
 Console.ResetColor();
 
-Row("License", "Copyright (c) 2026 Skynr Labs. All rights reserved.", ConsoleColor.Yellow);
+Row("License", "MIT License. Copyright (c) 2026 Skynr Labs.", ConsoleColor.Yellow);
 
 Console.ForegroundColor = ConsoleColor.DarkGray;
 Console.Write($"  {"Privacy",-14}");
@@ -111,8 +111,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Logging.SetMinimumLevel(LogLevel.Warning); // quiet in production
 
+// Allow generic browser-based frontend applications to use the HTTP endpoints (like /file)
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
+app.UseCors();
 app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(30) });
 
 // C-1: Only trust X-Forwarded-For when TRUST_PROXY=true is explicitly set by the operator.
