@@ -47,7 +47,22 @@ The relay works out of the box on Railway, Render, Fly.io, and similar platforms
 3. Set `TRUST_PROXY=true` if the platform injects `X-Forwarded-For`
 4. Point SemaBuzz at your relay by changing the `DefaultRelayUri` in your app
 
-## 🐳 Docker
+## � Building Standalone Binaries
+
+You can easily compile the relay into a single, self-contained executable for any platform—meaning the host machine won't even need .NET installed to run it!
+
+```bash
+# Build for Windows
+dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o publish/win
+
+# Build for Linux
+dotnet publish -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o publish/linux
+
+# Build for macOS (Apple Silicon)
+dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true -o publish/mac
+```
+
+## �🐳 Docker
 
 ```dockerfile
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
