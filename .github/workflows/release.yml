@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # ── linux-x64 ─────────────────────────────────────────────────────────
+      - name: Publish linux-x64
+        run: |
+          dotnet publish SemaBuzz.Relay.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:StripSymbols=true \
+            -o out/linux-x64
+
+      - name: Package linux-x64
+        run: |
+          cd out/linux-x64
+          tar -czf ../../SemaBuzz.Relay-linux-x64.tar.gz SemaBuzz.Relay
+
+      # ── linux-arm64 ───────────────────────────────────────────────────────
+      - name: Publish linux-arm64
+        run: |
+          dotnet publish SemaBuzz.Relay.csproj \
+            -c Release \
+            -r linux-arm64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:StripSymbols=true \
+            -o out/linux-arm64
+
+      - name: Package linux-arm64
+        run: |
+          cd out/linux-arm64
+          tar -czf ../../SemaBuzz.Relay-linux-arm64.tar.gz SemaBuzz.Relay
+
+      # ── win-x64 ───────────────────────────────────────────────────────────
+      - name: Publish win-x64
+        run: |
+          dotnet publish SemaBuzz.Relay.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -o out/win-x64
+
+      - name: Package win-x64
+        run: zip -j SemaBuzz.Relay-win-x64.zip out/win-x64/SemaBuzz.Relay.exe
+
+      # ── Release ───────────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SemaBuzz Relay ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            SemaBuzz.Relay-linux-x64.tar.gz
+            SemaBuzz.Relay-linux-arm64.tar.gz
+            SemaBuzz.Relay-win-x64.zip
