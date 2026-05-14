@@ -146,7 +146,7 @@ foreach (var ni in NetworkInterface.GetAllNetworkInterfaces()
     }
 }
 if (publicIp != null)
-    Row("Public IP", $"ws://{publicIp}:{port}/relay  ← share this (requires port forwarding)", ConsoleColor.Yellow);
+    Row("Public IP", $"ws://{publicIp}:{port}/relay  ← share with clients · requires port {port} forwarded on your router", ConsoleColor.Yellow);
 Row("Health", $"http://localhost:{port}/");
 Row("Keep-alive", "30 s");
 Row("Room TTL", "10 min");
