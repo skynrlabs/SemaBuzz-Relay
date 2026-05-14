@@ -65,44 +65,57 @@ var localIPs = NetworkInterface.GetAllNetworkInterfaces()
     .Select(ua => ua.Address.ToString())
     .ToList();
 
-// Discover public IP via a lightweight STUN binding request (no external HTTP call)
+// Discover public IP — try STUN first, fall back to plain HTTP
 string? publicIp = null;
 try
 {
     using var stunCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
     using var udp = new System.Net.Sockets.UdpClient();
-    // Google's STUN server
     var stunEp = new System.Net.IPEndPoint(
         (await System.Net.Dns.GetHostAddressesAsync("stun.l.google.com", stunCts.Token))[0], 19302);
-    // Minimal STUN Binding Request (20 bytes)
     var req = new byte[20];
-    req[0] = 0x00; req[1] = 0x01;           // type: Binding Request
-    req[2] = 0x00; req[3] = 0x00;           // length: 0
-    req[4] = 0x21; req[5] = 0x12; req[6] = 0xA4; req[7] = 0x42; // magic cookie
-    System.Security.Cryptography.RandomNumberGenerator.Fill(req.AsSpan(8, 12)); // transaction id
+    req[0] = 0x00; req[1] = 0x01;
+    req[4] = 0x21; req[5] = 0x12; req[6] = 0xA4; req[7] = 0x42;
+    System.Security.Cryptography.RandomNumberGenerator.Fill(req.AsSpan(8, 12));
     await udp.SendAsync(req, req.Length, stunEp);
     var result = await udp.ReceiveAsync(stunCts.Token);
     var resp = result.Buffer;
-    // XOR-MAPPED-ADDRESS attribute starts at byte 20; attr type 0x0020
     for (int i = 20; i < resp.Length - 4; i++)
     {
-        if (resp[i] == 0x00 && resp[i + 1] == 0x20)
+        if (resp[i] == 0x00 && resp[i + 1] == 0x20 && i + 11 < resp.Length && resp[i + 5] == 0x01)
         {
-            // Family byte at i+5, IP at i+8
-            if (i + 11 < resp.Length && resp[i + 5] == 0x01)
-            {
-                var b = new byte[4];
-                b[0] = (byte)(resp[i + 8]  ^ 0x21);
-                b[1] = (byte)(resp[i + 9]  ^ 0x12);
-                b[2] = (byte)(resp[i + 10] ^ 0xA4);
-                b[3] = (byte)(resp[i + 11] ^ 0x42);
-                publicIp = new System.Net.IPAddress(b).ToString();
-            }
+            var b = new byte[4];
+            b[0] = (byte)(resp[i + 8]  ^ 0x21);
+            b[1] = (byte)(resp[i + 9]  ^ 0x12);
+            b[2] = (byte)(resp[i + 10] ^ 0xA4);
+            b[3] = (byte)(resp[i + 11] ^ 0x42);
+            publicIp = new System.Net.IPAddress(b).ToString();
             break;
         }
     }
 }
-catch { /* not fatal — public IP display is best-effort */ }
+catch { /* STUN failed — try HTTP fallback */ }
+
+if (publicIp == null)
+{
+    // Try multiple reliable plain-text IP echo services in order
+    string[] ipEchoUrls = [
+        "https://checkip.amazonaws.com",
+        "https://icanhazip.com",
+        "https://api4.my-ip.io/v2/ip.txt"
+    ];
+    using var http = new System.Net.Http.HttpClient();
+    foreach (var url in ipEchoUrls)
+    {
+        try
+        {
+            using var httpCts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            var raw = (await http.GetStringAsync(url, httpCts.Token)).Trim();
+            if (System.Net.IPAddress.TryParse(raw, out _)) { publicIp = raw; break; }
+        }
+        catch { /* try next */ }
+    }
+}
 
 Console.ForegroundColor = ConsoleColor.DarkGray;
 Console.WriteLine("  ───────────────────────────────────────────────────────────────────────");
@@ -117,7 +130,7 @@ static void Row(string label, string value, ConsoleColor valueColor = ConsoleCol
     Console.ResetColor();
 }
 
-Row("Version", "1.2.0");
+Row("Version", "1.2.3");
 Row("Port", port.ToString());
 Row("Relay URI", $"ws://localhost:{port}/relay", ConsoleColor.Green);
 foreach (var ni in NetworkInterface.GetAllNetworkInterfaces()
