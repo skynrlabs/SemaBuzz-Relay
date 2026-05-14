@@ -49,13 +49,54 @@ Console.ResetColor();
 Console.WriteLine();
 
 // ── Server info ───────────────────────────────────────────────────────────────
+// WiFi and Ethernet adapters only (excludes loopback, tunnels, virtual adapters)
 var localIPs = NetworkInterface.GetAllNetworkInterfaces()
     .Where(ni => ni.OperationalStatus == OperationalStatus.Up
-              && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+              && (ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet
+               || ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211))
     .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
     .Where(ua => ua.Address.AddressFamily == AddressFamily.InterNetwork)
     .Select(ua => ua.Address.ToString())
     .ToList();
+
+// Discover public IP via a lightweight STUN binding request (no external HTTP call)
+string? publicIp = null;
+try
+{
+    using var udp = new System.Net.Sockets.UdpClient();
+    udp.Client.ReceiveTimeout = 2000;
+    // Google's STUN server
+    var stunEp = new System.Net.IPEndPoint(
+        (await System.Net.Dns.GetHostAddressesAsync("stun.l.google.com"))[0], 19302);
+    // Minimal STUN Binding Request (20 bytes)
+    var req = new byte[20];
+    req[0] = 0x00; req[1] = 0x01;           // type: Binding Request
+    req[2] = 0x00; req[3] = 0x00;           // length: 0
+    req[4] = 0x21; req[5] = 0x12; req[6] = 0xA4; req[7] = 0x42; // magic cookie
+    System.Security.Cryptography.RandomNumberGenerator.Fill(req.AsSpan(8, 12)); // transaction id
+    await udp.SendAsync(req, req.Length, stunEp);
+    var result = await udp.ReceiveAsync();
+    var resp = result.Buffer;
+    // XOR-MAPPED-ADDRESS attribute starts at byte 20; attr type 0x0020
+    for (int i = 20; i < resp.Length - 4; i++)
+    {
+        if (resp[i] == 0x00 && resp[i + 1] == 0x20)
+        {
+            // Family byte at i+5, port at i+6, IP at i+8
+            if (i + 11 < resp.Length && resp[i + 5] == 0x01)
+            {
+                var b = new byte[4];
+                b[0] = (byte)(resp[i + 8]  ^ 0x21);
+                b[1] = (byte)(resp[i + 9]  ^ 0x12);
+                b[2] = (byte)(resp[i + 10] ^ 0xA4);
+                b[3] = (byte)(resp[i + 11] ^ 0x42);
+                publicIp = new System.Net.IPAddress(b).ToString();
+            }
+            break;
+        }
+    }
+}
+catch { /* not fatal — public IP display is best-effort */ }
 
 Console.ForegroundColor = ConsoleColor.DarkGray;
 Console.WriteLine("  ───────────────────────────────────────────────────────────────────────");
@@ -70,11 +111,23 @@ static void Row(string label, string value, ConsoleColor valueColor = ConsoleCol
     Console.ResetColor();
 }
 
-Row("Version", "1.1.0");
+Row("Version", "1.2.0");
 Row("Port", port.ToString());
 Row("Relay URI", $"ws://localhost:{port}/relay", ConsoleColor.Green);
-foreach (var ip in localIPs)
-    Row("", $"ws://{ip}:{port}/relay", ConsoleColor.Green);
+foreach (var ni in NetworkInterface.GetAllNetworkInterfaces()
+    .Where(ni => ni.OperationalStatus == OperationalStatus.Up
+              && (ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet
+               || ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211)))
+{
+    foreach (var ua in ni.GetIPProperties().UnicastAddresses
+        .Where(ua => ua.Address.AddressFamily == AddressFamily.InterNetwork))
+    {
+        var label = ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ? "WiFi" : "Ethernet";
+        Row(label, $"ws://{ua.Address}:{port}/relay", ConsoleColor.Green);
+    }
+}
+if (publicIp != null)
+    Row("Public IP", $"ws://{publicIp}:{port}/relay  ← share this (requires port forwarding)", ConsoleColor.Yellow);
 Row("Health", $"http://localhost:{port}/");
 Row("Keep-alive", "30 s");
 Row("Room TTL", "10 min");
