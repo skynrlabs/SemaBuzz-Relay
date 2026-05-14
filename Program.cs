@@ -63,11 +63,11 @@ var localIPs = NetworkInterface.GetAllNetworkInterfaces()
 string? publicIp = null;
 try
 {
+    using var stunCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
     using var udp = new System.Net.Sockets.UdpClient();
-    udp.Client.ReceiveTimeout = 2000;
     // Google's STUN server
     var stunEp = new System.Net.IPEndPoint(
-        (await System.Net.Dns.GetHostAddressesAsync("stun.l.google.com"))[0], 19302);
+        (await System.Net.Dns.GetHostAddressesAsync("stun.l.google.com", stunCts.Token))[0], 19302);
     // Minimal STUN Binding Request (20 bytes)
     var req = new byte[20];
     req[0] = 0x00; req[1] = 0x01;           // type: Binding Request
@@ -75,14 +75,14 @@ try
     req[4] = 0x21; req[5] = 0x12; req[6] = 0xA4; req[7] = 0x42; // magic cookie
     System.Security.Cryptography.RandomNumberGenerator.Fill(req.AsSpan(8, 12)); // transaction id
     await udp.SendAsync(req, req.Length, stunEp);
-    var result = await udp.ReceiveAsync();
+    var result = await udp.ReceiveAsync(stunCts.Token);
     var resp = result.Buffer;
     // XOR-MAPPED-ADDRESS attribute starts at byte 20; attr type 0x0020
     for (int i = 20; i < resp.Length - 4; i++)
     {
         if (resp[i] == 0x00 && resp[i + 1] == 0x20)
         {
-            // Family byte at i+5, port at i+6, IP at i+8
+            // Family byte at i+5, IP at i+8
             if (i + 11 < resp.Length && resp[i + 5] == 0x01)
             {
                 var b = new byte[4];
