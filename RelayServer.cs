@@ -13,7 +13,7 @@ internal sealed class RelayServer
 {
     private static readonly TimeSpan RoomTtl = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan JoinTimeout = TimeSpan.FromSeconds(10);
-    private const int MaxRooms = 500;   // global cap
+    private readonly int _maxRooms;
     private const int MaxPerIp = 5;     // concurrent sockets per IP
     private const int MaxRoomsPerIp = 2;     // rooms a single IP may host at once (C-2)
     private const long BwCapBytesPerSec = 2 * 1024 * 1024; // 2 MB/s per session (H-1)
@@ -28,8 +28,9 @@ internal sealed class RelayServer
 
     private readonly System.Timers.Timer _sweepTimer;
 
-    public RelayServer()
+    public RelayServer(int maxRooms = 500)
     {
+        _maxRooms = maxRooms;
         // M-4: sweep every 30 s so stale rooms are reaped within one TTL period, not two.
         _sweepTimer = new System.Timers.Timer(TimeSpan.FromSeconds(30)) { AutoReset = true };
         _sweepTimer.Elapsed += (_, _) => Sweep();
@@ -92,7 +93,7 @@ internal sealed class RelayServer
         if (type == SemaBuzzRelayPacketType.JoinHost)
         {
             // --- Global room cap ---
-            if (_rooms.Count >= MaxRooms)
+            if (_rooms.Count >= _maxRooms)
             {
                 await CloseAsync(ws, WebSocketCloseStatus.PolicyViolation, "Server busy", ct);
                 return;

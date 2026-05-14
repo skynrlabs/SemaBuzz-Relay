@@ -29,9 +29,15 @@ if (int.TryParse(portStr, out var p))
 else
     port = 7171;
 
+int maxRooms = int.TryParse(Environment.GetEnvironmentVariable("MAX_ROOMS"), out var mr) ? mr : 500;
+
 for (var i = 0; i < args.Length - 1; i++)
+{
     if ((args[i] == "--port" || args[i] == "-p") && int.TryParse(args[i + 1], out var ap))
         port = ap;
+    if (args[i] == "--max-rooms" && int.TryParse(args[i + 1], out var amr) && amr > 0)
+        maxRooms = amr;
+}
 
 // ── Banner ────────────────────────────────────────────────────────────────────
 Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -132,7 +138,7 @@ Row("Health", $"http://localhost:{port}/");
 Row("Keep-alive", "30 s");
 Row("Room TTL", "10 min");
 Row("File TTL", "10 min  (staged files auto-expire)");
-Row("Max rooms", "500  (global)");
+Row("Max rooms", $"{maxRooms}  (global)");
 Row("Max per IP", "5  concurrent connections");
 
 Console.ForegroundColor = ConsoleColor.DarkGray;
@@ -186,7 +192,7 @@ var trustProxy = string.Equals(
     Environment.GetEnvironmentVariable("TRUST_PROXY"), "true",
     StringComparison.OrdinalIgnoreCase);
 
-var relay = new RelayServer();
+var relay = new RelayServer(maxRooms);
 
 // WebSocket endpoint: clients connect here to join a relay room.
 app.Map("/relay", async ctx =>
