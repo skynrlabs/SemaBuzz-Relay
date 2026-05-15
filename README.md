@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET 9.0](https://img.shields.io/badge/.NET-9.0-512BD4.svg)](https://dotnet.microsoft.com/)
-[![Contributions: Read Only](https://img.shields.io/badge/Contributions-Read_Only-red.svg)](CONTRIBUTING.md)
+[![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 Self-hosted WebSocket blind relay server. Originally built for the [**SemaBuzz Protocol**](https://github.com/skynrlabs/SemaBuzz-Protocol), it is completely protocol-agnostic and can be used by **any application** requiring encrypted peer-to-peer pairing.
 
@@ -175,7 +175,7 @@ docker run -p 7171:7171 -e MAX_ROOMS=50 semabuzz-relay
 
 ## 🤝 Contributing
 
-Since this is a read-only release, we are **not** accepting upstream contributions (Issues or Pull Requests) at this time. However, you are completely free to fork the project and build upon it under the terms of the MIT license. Please review our [Contributing Guidelines](CONTRIBUTING.md).
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the branch model, coding standards, and PR process.
 
 ## ⚖️ License
 
@@ -314,7 +314,7 @@ To prevent abuse, the relay currently enforces the following hardcoded limits:
 
 ## 🤝 Contributing
 
-Since this is a read-only release, we are **not** accepting upstream contributions (Issues or Pull Requests) at this time. However, you are completely free to fork the project and build upon it under the terms of the MIT license. Please review our [Contributing Guidelines](CONTRIBUTING.md).
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the branch model, coding standards, and PR process.
 
 ## ⚖️ License
 
