@@ -173,6 +173,99 @@ docker run -p 7171:7171 -e MAX_ROOMS=50 semabuzz-relay
 | Bandwidth cap | 2 MB/s per session | No |
 | Room TTL (idle) | 10 minutes | No |
 
+---
+
+## 🌐 Hosting Guide
+
+The relay is a single self-contained binary — no runtime, no database, no config files. Pick the option that fits you best.
+
+---
+
+### 🪂 Fly.io (free)
+
+Fly.io's free tier includes 3 shared VMs that stay always-on — no spin-down, Docker-native.
+
+1. [Install flyctl](https://fly.io/docs/hands-on/install-flyctl/) and run `fly auth login`
+2. Clone this repo and `cd` into it
+3. Run `fly launch` — accept defaults, choose a region close to your users
+4. Run `fly deploy`
+5. Your relay is live at `wss://your-app-name.fly.dev/relay`
+
+Set `PORT` via `fly secrets set PORT=7171` if needed (Fly maps internal ports automatically).
+
+---
+
+### 🚂 Railway
+
+Railway deploys directly from GitHub with no config needed. Free trial credit included — no credit card required to start.
+
+[Deploy on Railway →](https://railway.com?referralCode=si-9XE)
+
+1. Sign up and create a new project → **Deploy from GitHub repo**
+2. Point it at your fork of `skynrlabs/SemaBuzz-Relay`
+3. Railway auto-detects the Dockerfile and builds it
+4. Set the `PORT` environment variable to match Railway's assigned port (Railway injects `$PORT` automatically)
+5. Your relay is live at the generated Railway domain — use `wss://your-app.railway.app/relay`
+
+---
+
+### 🏠 Home server / Raspberry Pi
+
+Best for always-on local use. Requires port forwarding on your router.
+
+1. Download the [latest binary](../../releases/latest) for your platform
+2. Run `./SemaBuzz.Relay` — it will print your public IP as the relay URI
+3. Forward **TCP port 7171** on your router to the machine's local IP
+4. Share `ws://your-public-ip:7171/relay` with your peer
+
+For production use, put Caddy or Nginx in front for WSS (TLS):
+
+```
+# Caddyfile
+relay.yourdomain.com {
+    reverse_proxy localhost:7171
+}
+```
+
+---
+
+### ☁️ Any Linux VPS (DigitalOcean, Hetzner, Linode, etc.)
+
+```bash
+# Download and extract
+wget https://github.com/skynrlabs/SemaBuzz-Relay/releases/latest/download/SemaBuzz.Relay-linux-x64.tar.gz
+tar -xzf SemaBuzz.Relay-linux-x64.tar.gz
+chmod +x SemaBuzz.Relay
+
+# Open the port
+sudo ufw allow 7171/tcp
+
+# Run (or set up as a systemd service)
+./SemaBuzz.Relay
+```
+
+**systemd service** (`/etc/systemd/system/semabuzz-relay.service`):
+
+```ini
+[Unit]
+Description=SemaBuzz Relay
+After=network.target
+
+[Service]
+ExecStart=/opt/semabuzz-relay/SemaBuzz.Relay
+Restart=always
+Environment=PORT=7171
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now semabuzz-relay
+```
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the branch model, coding standards, and PR process.
